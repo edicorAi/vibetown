@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS work_items (
+    id TEXT PRIMARY KEY NOT NULL,
+    project_id TEXT,
+    rig_id TEXT REFERENCES rigs(id),
+    convoy_id TEXT REFERENCES convoys(id),
+    prefix TEXT,
+    item_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'open',
+    priority INTEGER DEFAULT 0,
+    assignee TEXT,
+    labels_json TEXT NOT NULL DEFAULT '[]',
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    parent_id TEXT REFERENCES work_items(id),
+    thread_id TEXT,
+    sort_order REAL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: vibetown_test
+      POSTGRES_USER: vibetown
+      POSTGRES_PASSWORD: vibetown
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vibetown"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  engine:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/Dockerfile.engine
+    environment:
+      VT_DATABASE_URL: postgres://vibetown:vibetown@postgres:5432/vibetown_test
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  server:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/Dockerfile.server
+    ports:
+      - "3000:3000"
+    environment:
+      VT_DATABASE_URL: postgres://vibetown:vibetown@postgres:5432/vibetown_test
+      VT_ENGINE_GRPC_ADDR: engine:50051
+      VT_PORT: "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

@@ -1,0 +1,23 @@
+Vibetown has been deployed successfully!
+
+{{- if .Values.ingress.enabled }}
+
+Access the application via Ingress:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+
+{{- else }}
+
+To access the application, set up a port-forward:
+
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "vibetown.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME {{ .Values.server.httpPort }}:{{ .Values.server.httpPort }}
+
+Then open http://localhost:{{ .Values.server.httpPort }} in your browser.
+
+{{- end }}
+
+To check the status of the deployment:
+
+  kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}"

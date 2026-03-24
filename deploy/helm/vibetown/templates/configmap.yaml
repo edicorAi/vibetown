@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vibetown.fullname" . }}
+  labels:
+    {{- include "vibetown.labels" . | nindent 4 }}
+data:
+  VT_LOG_LEVEL: "info"
+  VT_AGENT_RUNTIME: "default"
+  VT_WORKTREE_PATH: "/data/worktrees"

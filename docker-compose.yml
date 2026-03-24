@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:17
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: vibetown
+      POSTGRES_USER: vibetown
+      POSTGRES_PASSWORD: vibetown
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vibetown"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibetown-net
+
+  engine:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.engine
+    ports:
+      - "50051:50051"
+    environment:
+      VT_DATABASE_URL: postgres://vibetown:vibetown@postgres:5432/vibetown
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vibetown-net
+
+  server:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.server
+    ports:
+      - "3000:3000"
+    environment:
+      VT_DATABASE_URL: postgres://vibetown:vibetown@postgres:5432/vibetown
+      VT_ENGINE_GRPC_ADDR: engine:50051
+      VT_PORT: "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    volumes:
+      - worktrees:/app/worktrees
+    networks:
+      - vibetown-net
+
+  web:
+    build:
+      context: ./web
+      dockerfile: ../deploy/docker/Dockerfile.web
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    command: pnpm dev --host
+    networks:
+      - vibetown-net
+
+volumes:
+  pgdata:
+  worktrees:
+
+networks:
+  vibetown-net:
+    driver: bridge

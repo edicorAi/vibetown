@@ -1,0 +1,70 @@
+# ─── Go ────────────────────────────────────────────────────────────────────────
+engine/bin/
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# ─── Rust ──────────────────────────────────────────────────────────────────────
+server/target/
+*.rlib
+
+# ─── Node / Frontend ──────────────────────────────────────────────────────────
+node_modules/
+dist/
+.turbo/
+.pnpm-store/
+*.tsbuildinfo
+# Note: pnpm-lock.yaml is NOT ignored — CI requires it for --frozen-lockfile
+
+# ─── Proto generated ──────────────────────────────────────────────────────────
+engine/internal/grpcapi/gen/
+
+# ─── Build / Coverage ─────────────────────────────────────────────────────────
+coverage/
+*.log
+*.out
+
+# ─── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.iml
+
+# ─── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ─── Environment / Secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+*.pem
+*.key
+credentials.json
+
+# ─── Docker ────────────────────────────────────────────────────────────────────
+.docker/
+
+# ─── Temp ──────────────────────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.orig
+
+# ─── SQLite dev databases ─────────────────────────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
+
+# ─── Claude plans ──────────────────────────────────────────────────────────────
+.claude/plan/
+
+# ─── Examples (reference code, not part of the build) ─────────────────────────
+_examples/

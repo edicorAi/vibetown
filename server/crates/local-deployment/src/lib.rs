@@ -1,0 +1,346 @@
+use std::{collections::HashMap, sync::Arc};
+
+use api_types::LoginStatus;
+use async_trait::async_trait;
+use client_info::ClientInfo;
+use db::DBService;
+use deployment::{Deployment, DeploymentError, RemoteClientNotConfigured};
+use executors::profile::ExecutorConfigs;
+use git::GitService;
+use services::services::{
+    analytics::{AnalyticsConfig, AnalyticsContext, AnalyticsService, generate_user_id},
+    approvals::Approvals,
+    auth::AuthContext,
+    config::{Config, load_config_from_file, save_config_to_file},
+    container::ContainerService,
+    events::EventService,
+    file::FileService,
+    file_search::FileSearchCache,
+    filesystem::FilesystemService,
+    oauth_credentials::OAuthCredentials,
+    pr_monitor::PrMonitorService,
+    queued_message::QueuedMessageService,
+    remote_client::{RemoteClient, RemoteClientError},
+    repo::RepoService,
+};
+use tokio::sync::RwLock;
+use utils::{
+    assets::{config_path, credentials_path},
+    msg_store::MsgStore,
+};
+use uuid::Uuid;
+use workspace_manager::WorkspaceManager;
+use worktree_manager::WorktreeManager;
+
+use crate::container::LocalContainerService;
+mod command;
+pub mod container;
+mod copy;
+
+#[derive(Clone)]
+pub struct LocalDeployment {
+    config: Arc<RwLock<Config>>,
+    user_id: String,
+    db: DBService,
+    workspace_manager: WorkspaceManager,
+    analytics: Option<AnalyticsService>,
+    container: LocalContainerService,
+    git: GitService,
+    repo: RepoService,
+    file: FileService,
+    filesystem: FilesystemService,
+    events: EventService,
+    file_search_cache: Arc<FileSearchCache>,
+    approvals: Approvals,
+    queued_message_service: QueuedMessageService,
+    remote_client: Result<RemoteClient, RemoteClientNotConfigured>,
+    auth_context: AuthContext,
+    oauth_handoffs: Arc<RwLock<HashMap<Uuid, PendingHandoff>>>,
+    client_info: ClientInfo,
+}
+
+#[derive(Debug, Clone)]
+struct PendingHandoff {
+    provider: String,
+    app_verifier: String,
+}
+
+#[async_trait]
+impl Deployment for LocalDeployment {
+    async fn new() -> Result<Self, DeploymentError> {
+        services::services::execution_process::migrate_execution_logs_to_files()
+            .await
+            .map_err(|e| DeploymentError::Other(anyhow::anyhow!("Migration failed: {}", e)))?;
+
+        let mut raw_config = load_config_from_file(&config_path()).await;
+
+        let profiles = ExecutorConfigs::get_cached();
+        if !raw_config.onboarding_acknowledged
+            && let Ok(recommended_executor) = profiles.get_recommended_executor_profile().await
+        {
+            raw_config.executor_profile = recommended_executor;
+        }
+
+        {
+            let current_version = utils::version::APP_VERSION;
+            let stored_version = raw_config.last_app_version.as_deref();
+
+            if stored_version != Some(current_version) {
+                raw_config.show_release_notes = stored_version.is_some();
+                raw_config.last_app_version = Some(current_version.to_string());
+            }
+        }
+
+        save_config_to_file(&raw_config, &config_path()).await?;
+
+        if let Some(workspace_dir) = &raw_config.workspace_dir {
+            let path = utils::path::expand_tilde(workspace_dir);
+            WorktreeManager::set_workspace_dir_override(path);
+        }
+
+        let config = Arc::new(RwLock::new(raw_config));
+        let user_id = generate_user_id();
+        let analytics = AnalyticsConfig::new().map(AnalyticsService::new);
+        let git = GitService::new();
+        let repo = RepoService::new();
+        let msg_stores = Arc::new(RwLock::new(HashMap::new()));
+        let filesystem = FilesystemService::new();
+
+        let events_msg_store = Arc::new(MsgStore::new());
+        let events_entry_count = Arc::new(RwLock::new(0));
+
+        let db = {
+            let hook = EventService::create_hook(
+                events_msg_store.clone(),
+                events_entry_count.clone(),
+                DBService::new().await?,
+            );
+            DBService::new_with_after_connect(hook).await?
+        };
+
+        let file = FileService::new(db.clone().pool)?;
+        {
+            let file_service = file.clone();
+            tokio::spawn(async move {
+                tracing::info!("Starting orphaned file cleanup...");
+                if let Err(e) = file_service.delete_orphaned_files().await {
+                    tracing::error!("Failed to clean up orphaned files: {}", e);
+                }
+            });
+        }
+
+        let approvals = Approvals::new();
+        let queued_message_service = QueuedMessageService::new();
+
+        let oauth_credentials = Arc::new(OAuthCredentials::new(credentials_path()));
+        if let Err(e) = oauth_credentials.load().await {
+            tracing::warn!(?e, "failed to load OAuth credentials");
+        }
+
+        let profile_cache = Arc::new(RwLock::new(None));
+        let auth_context = AuthContext::new(oauth_credentials.clone(), profile_cache.clone());
+
+        let api_base = std::env::var("VK_SHARED_API_BASE")
+            .ok()
+            .or_else(|| option_env!("VK_SHARED_API_BASE").map(|s| s.to_string()));
+
+        let remote_client = match api_base {
+            Some(url) => match RemoteClient::new(&url, auth_context.clone()) {
+                Ok(client) => {
+                    tracing::info!("Remote client initialized with URL: {}", url);
+                    Ok(client)
+                }
+                Err(e) => {
+                    tracing::error!(?e, "failed to create remote client");
+                    Err(RemoteClientNotConfigured)
+                }
+            },
+            None => {
+                tracing::info!("VK_SHARED_API_BASE not set; remote features disabled");
+                Err(RemoteClientNotConfigured)
+            }
+        };
+
+        let oauth_handoffs = Arc::new(RwLock::new(HashMap::new()));
+        let client_info = ClientInfo::new();
+
+        let analytics_ctx = analytics.as_ref().map(|s| AnalyticsContext {
+            user_id: user_id.clone(),
+            analytics_service: s.clone(),
+        });
+        let workspace_manager = WorkspaceManager::new(db.clone());
+        let container = LocalContainerService::new(
+            db.clone(),
+            workspace_manager.clone(),
+            msg_stores.clone(),
+            config.clone(),
+            git.clone(),
+            file.clone(),
+            analytics_ctx,
+            approvals.clone(),
+            queued_message_service.clone(),
+            remote_client.clone().ok(),
+        )
+        .await;
+
+        let events = EventService::new(db.clone(), events_msg_store, events_entry_count);
+        let file_search_cache = Arc::new(FileSearchCache::new());
+
+        {
+            let db = db.clone();
+            let analytics = analytics.as_ref().map(|s| AnalyticsContext {
+                user_id: user_id.clone(),
+                analytics_service: s.clone(),
+            });
+            let container = container.clone();
+            let rc = remote_client.clone().ok();
+            PrMonitorService::spawn(db, analytics, container, rc).await;
+        }
+
+        let deployment = Self {
+            config,
+            user_id,
+            db,
+            workspace_manager,
+            analytics,
+            container,
+            git,
+            repo,
+            file,
+            filesystem,
+            events,
+            file_search_cache,
+            approvals,
+            queued_message_service,
+            remote_client,
+            auth_context,
+            oauth_handoffs,
+            client_info,
+        };
+
+        Ok(deployment)
+    }
+
+    fn user_id(&self) -> &str {
+        &self.user_id
+    }
+
+    fn config(&self) -> &Arc<RwLock<Config>> {
+        &self.config
+    }
+
+    fn db(&self) -> &DBService {
+        &self.db
+    }
+
+    fn analytics(&self) -> &Option<AnalyticsService> {
+        &self.analytics
+    }
+
+    fn container(&self) -> &impl ContainerService {
+        &self.container
+    }
+
+    fn git(&self) -> &GitService {
+        &self.git
+    }
+
+    fn repo(&self) -> &RepoService {
+        &self.repo
+    }
+
+    fn file(&self) -> &FileService {
+        &self.file
+    }
+
+    fn filesystem(&self) -> &FilesystemService {
+        &self.filesystem
+    }
+
+    fn events(&self) -> &EventService {
+        &self.events
+    }
+
+    fn file_search_cache(&self) -> &Arc<FileSearchCache> {
+        &self.file_search_cache
+    }
+
+    fn approvals(&self) -> &Approvals {
+        &self.approvals
+    }
+
+    fn queued_message_service(&self) -> &QueuedMessageService {
+        &self.queued_message_service
+    }
+
+    fn auth_context(&self) -> &AuthContext {
+        &self.auth_context
+    }
+
+    fn client_info(&self) -> &ClientInfo {
+        &self.client_info
+    }
+}
+
+impl LocalDeployment {
+    pub fn workspace_manager(&self) -> &WorkspaceManager {
+        &self.workspace_manager
+    }
+
+    pub fn remote_client(&self) -> Result<RemoteClient, RemoteClientNotConfigured> {
+        self.remote_client.clone()
+    }
+
+    pub async fn get_login_status(&self) -> LoginStatus {
+        if self.auth_context.get_credentials().await.is_none() {
+            self.auth_context.clear_profile().await;
+            return LoginStatus::LoggedOut;
+        };
+
+        if let Some(cached_profile) = self.auth_context.cached_profile().await {
+            return LoginStatus::LoggedIn {
+                profile: cached_profile,
+            };
+        }
+
+        let Ok(client) = self.remote_client() else {
+            return LoginStatus::LoggedOut;
+        };
+
+        match client.profile().await {
+            Ok(profile) => {
+                self.auth_context.set_profile(profile.clone()).await;
+                LoginStatus::LoggedIn { profile }
+            }
+            Err(RemoteClientError::Auth) => {
+                let _ = self.auth_context.clear_credentials().await;
+                self.auth_context.clear_profile().await;
+                LoginStatus::LoggedOut
+            }
+            Err(_) => LoginStatus::LoggedOut,
+        }
+    }
+
+    pub async fn store_oauth_handoff(
+        &self,
+        handoff_id: Uuid,
+        provider: String,
+        app_verifier: String,
+    ) {
+        self.oauth_handoffs.write().await.insert(
+            handoff_id,
+            PendingHandoff {
+                provider,
+                app_verifier,
+            },
+        );
+    }
+
+    pub async fn take_oauth_handoff(&self, handoff_id: &Uuid) -> Option<(String, String)> {
+        self.oauth_handoffs
+            .write()
+            .await
+            .remove(handoff_id)
+            .map(|state| (state.provider, state.app_verifier))
+    }
+}

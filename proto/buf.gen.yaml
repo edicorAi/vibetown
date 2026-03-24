@@ -1,0 +1,20 @@
+version: v2
+clean: true
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/edicorai/vibetown/engine/internal/grpcapi/gen
+plugins:
+  # Go protobuf
+  - remote: buf.build/protocolbuffers/go
+    out: ../engine/internal/grpcapi/gen
+    opt:
+      - paths=source_relative
+  # Go gRPC
+  - remote: buf.build/grpc/go
+    out: ../engine/internal/grpcapi/gen
+    opt:
+      - paths=source_relative
+inputs:
+  - directory: vibetown

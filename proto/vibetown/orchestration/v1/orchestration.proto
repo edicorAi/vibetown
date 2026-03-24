@@ -1,0 +1,220 @@
+syntax = "proto3";
+
+package vibetown.orchestration.v1;
+
+option go_package = "github.com/edicorai/vibetown/engine/internal/grpcapi/gen/vibetown/orchestration/v1";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// ─── Health ──────────────────────────────────────────────────────────────────
+
+service HealthService {
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  enum ServingStatus {
+    SERVING_STATUS_UNSPECIFIED = 0;
+    SERVING_STATUS_SERVING = 1;
+    SERVING_STATUS_NOT_SERVING = 2;
+  }
+  ServingStatus status = 1;
+}
+
+// ─── Orchestration ───────────────────────────────────────────────────────────
+
+service OrchestrationService {
+  // Town lifecycle
+  rpc CreateTown(CreateTownRequest) returns (Town);
+  rpc GetTown(GetTownRequest) returns (Town);
+
+  // Rig management
+  rpc CreateRig(CreateRigRequest) returns (Rig);
+  rpc ListRigs(ListRigsRequest) returns (ListRigsResponse);
+
+  // Agent lifecycle
+  rpc SpawnAgent(SpawnAgentRequest) returns (Agent);
+  rpc KillAgent(KillAgentRequest) returns (google.protobuf.Empty);
+  rpc GetAgentStatus(GetAgentStatusRequest) returns (Agent);
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+
+  // Convoy operations
+  rpc StartConvoy(StartConvoyRequest) returns (Convoy);
+  rpc GetConvoyStatus(GetConvoyStatusRequest) returns (Convoy);
+  rpc ListConvoys(ListConvoysRequest) returns (ListConvoysResponse);
+
+  // Work dispatch
+  rpc DispatchWork(DispatchWorkRequest) returns (DispatchWorkResponse);
+
+  // Merge queue
+  rpc QueueMerge(QueueMergeRequest) returns (MergeRequest);
+  rpc GetMergeQueue(GetMergeQueueRequest) returns (MergeQueueResponse);
+}
+
+// ─── Town ────────────────────────────────────────────────────────────────────
+
+message Town {
+  string id = 1;
+  string name = 2;
+  string owner = 3;
+  string config_json = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message CreateTownRequest {
+  string name = 1;
+  string owner = 2;
+}
+
+message GetTownRequest {
+  string id = 1;
+}
+
+// ─── Rig ─────────────────────────────────────────────────────────────────────
+
+message Rig {
+  string id = 1;
+  string town_id = 2;
+  string name = 3;
+  string repo_url = 4;
+  string beads_prefix = 5;
+  string config_json = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message CreateRigRequest {
+  string town_id = 1;
+  string name = 2;
+  string repo_url = 3;
+  string beads_prefix = 4;
+}
+
+message ListRigsRequest {
+  string town_id = 1;
+}
+
+message ListRigsResponse {
+  repeated Rig rigs = 1;
+}
+
+// ─── Agent ───────────────────────────────────────────────────────────────────
+
+message Agent {
+  string id = 1;
+  string name = 2;
+  string role = 3;       // mayor, deacon, witness, refinery, polecat, crew
+  string rig_id = 4;
+  string status = 5;     // idle, working, stuck, zombie, done
+  string runtime = 6;    // claude, codex, gemini, cursor, amp
+  string config_json = 7;
+  google.protobuf.Timestamp last_activity_at = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message SpawnAgentRequest {
+  string name = 1;
+  string role = 2;
+  string rig_id = 3;
+  string runtime = 4;
+  string config_json = 5;
+}
+
+message KillAgentRequest {
+  string id = 1;
+}
+
+message GetAgentStatusRequest {
+  string id = 1;
+}
+
+message ListAgentsRequest {
+  string rig_id = 1;     // optional filter
+  string role = 2;       // optional filter
+  string status = 3;     // optional filter
+}
+
+message ListAgentsResponse {
+  repeated Agent agents = 1;
+}
+
+// ─── Convoy ──────────────────────────────────────────────────────────────────
+
+message Convoy {
+  string id = 1;
+  string name = 2;
+  string status = 3;     // active, completed, failed, cancelled
+  string formula = 4;
+  string config_json = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message StartConvoyRequest {
+  string name = 1;
+  string formula = 2;
+  string config_json = 3;
+}
+
+message GetConvoyStatusRequest {
+  string id = 1;
+}
+
+message ListConvoysRequest {
+  string status = 1;     // optional filter
+}
+
+message ListConvoysResponse {
+  repeated Convoy convoys = 1;
+}
+
+// ─── Work Dispatch ───────────────────────────────────────────────────────────
+
+message DispatchWorkRequest {
+  string agent_id = 1;
+  string title = 2;
+  string description = 3;
+  string rig_id = 4;
+}
+
+message DispatchWorkResponse {
+  string work_item_id = 1;
+  bool accepted = 2;
+}
+
+// ─── Merge Queue ─────────────────────────────────────────────────────────────
+
+message MergeRequest {
+  string id = 1;
+  string work_item_id = 2;
+  string rig_id = 3;
+  string branch = 4;
+  string target_branch = 5;
+  string status = 6;     // pending, testing, passed, failed, merged, rejected
+  string agent_id = 7;
+  string pr_url = 8;
+  google.protobuf.Timestamp queued_at = 9;
+  google.protobuf.Timestamp merged_at = 10;
+}
+
+message QueueMergeRequest {
+  string rig_id = 1;
+  string branch = 2;
+  string target_branch = 3;
+  string work_item_id = 4;
+  string agent_id = 5;
+}
+
+message GetMergeQueueRequest {
+  string rig_id = 1;     // optional filter
+}
+
+message MergeQueueResponse {
+  repeated MergeRequest requests = 1;
+}

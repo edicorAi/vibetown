@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibetown
+  # namespace set by kustomization.yaml or overlay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibetown
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibetown
+    spec:
+      serviceAccountName: vibetown
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        # --- vibetown-server (Rust, HTTP) ---
+        - name: server
+          image: vibetown-server:latest
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibetown-db
+                  key: password
+            - name: VT_DATABASE_URL
+              value: "postgres://vibetown:$(DATABASE_PASSWORD)@$(POSTGRES_HOST):5432/vibetown"
+            - name: VT_ENGINE_GRPC_ADDR
+              value: "localhost:50051"
+            - name: VT_PORT
+              value: "3000"
+          envFrom:
+            - configMapRef:
+                name: vibetown
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: worktrees
+              mountPath: /data/worktrees
+
+        # --- vibetown-engine (Go, gRPC) ---
+        - name: engine
+          image: vibetown-engine:latest
+          ports:
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+          env:
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibetown-db
+                  key: password
+            - name: VT_DATABASE_URL
+              value: "postgres://vibetown:$(DATABASE_PASSWORD)@$(POSTGRES_HOST):5432/vibetown"
+          envFrom:
+            - configMapRef:
+                name: vibetown
+          livenessProbe:
+            exec:
+              command:
+                - /bin/grpc_health_probe
+                - -addr=:50051
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/grpc_health_probe
+                - -addr=:50051
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: worktrees
+              mountPath: /data/worktrees
+
+      volumes:
+        - name: worktrees
+          emptyDir: {}

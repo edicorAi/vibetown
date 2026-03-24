@@ -1,0 +1,79 @@
+replicaCount: 1
+
+engine:
+  image:
+    repository: vibetown-engine
+    tag: latest
+    pullPolicy: IfNotPresent
+  grpcPort: 50051
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+server:
+  image:
+    repository: vibetown-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  httpPort: 3000
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+postgres:
+  host: ""
+  port: 5432
+  database: vibetown
+  user: vibetown
+  existingSecret: ""
+  secretKeys:
+    password: password
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: vibetown.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+storage:
+  worktrees:
+    type: emptyDir
+    size: 10Gi
+    storageClassName: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podSecurityContext:
+  fsGroup: 1000
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

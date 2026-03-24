@@ -1,0 +1,177 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+@source "../../app/**/*.{ts,tsx}";
+@source "../../web-core/**/*.{ts,tsx}";
+@source "../**/*.{ts,tsx}";
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+    --font-sans: 'Geist Variable', sans-serif;
+    --color-orange-accent: #FF5C00;
+}
+
+/* --------------------------------------------------------------------------
+   Light theme – warm beige inspired by OpenFang
+   -------------------------------------------------------------------------- */
+:root {
+    --background: #F5F4F2;
+    --foreground: #1A1817;
+    --card: #FFFFFF;
+    --card-foreground: #1A1817;
+    --popover: #FFFFFF;
+    --popover-foreground: #1A1817;
+    --primary: #FF5C00;
+    --primary-foreground: #FFFFFF;
+    --secondary: #EEEDEB;
+    --secondary-foreground: #1A1817;
+    --muted: #EEEDEB;
+    --muted-foreground: #78716C;
+    --accent: #EEEDEB;
+    --accent-foreground: #1A1817;
+    --destructive: #EF4444;
+    --border: #E7E5E4;
+    --input: #E7E5E4;
+    --ring: #FF5C00;
+    --chart-1: #FF5C00;
+    --chart-2: #22C55E;
+    --chart-3: #3B82F6;
+    --chart-4: #F59E0B;
+    --chart-5: #8B5CF6;
+    --radius: 0.625rem;
+    --sidebar: #FFFFFF;
+    --sidebar-foreground: #1A1817;
+    --sidebar-primary: #FF5C00;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #FFF1EB;
+    --sidebar-accent-foreground: #1A1817;
+    --sidebar-border: #E7E5E4;
+    --sidebar-ring: #FF5C00;
+}
+
+/* --------------------------------------------------------------------------
+   Dark theme – near-black with charcoal cards
+   -------------------------------------------------------------------------- */
+.dark {
+    --background: #0A0908;
+    --foreground: #F5F4F2;
+    --card: #1A1918;
+    --card-foreground: #F5F4F2;
+    --popover: #1A1918;
+    --popover-foreground: #F5F4F2;
+    --primary: #FF5C00;
+    --primary-foreground: #FFFFFF;
+    --secondary: #292524;
+    --secondary-foreground: #F5F4F2;
+    --muted: #292524;
+    --muted-foreground: #A8A29E;
+    --accent: #292524;
+    --accent-foreground: #F5F4F2;
+    --destructive: #EF4444;
+    --border: rgba(255, 255, 255, 0.1);
+    --input: rgba(255, 255, 255, 0.15);
+    --ring: #FF5C00;
+    --chart-1: #FF5C00;
+    --chart-2: #22C55E;
+    --chart-3: #3B82F6;
+    --chart-4: #F59E0B;
+    --chart-5: #8B5CF6;
+    --sidebar: #141312;
+    --sidebar-foreground: #F5F4F2;
+    --sidebar-primary: #FF5C00;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #292524;
+    --sidebar-accent-foreground: #F5F4F2;
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+    --sidebar-ring: #FF5C00;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Status dot animations
+   -------------------------------------------------------------------------- */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.status-dot-working {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   Card stagger animation
+   -------------------------------------------------------------------------- */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-card-enter {
+  animation: card-enter 0.3s ease-out both;
+}
+
+/* --------------------------------------------------------------------------
+   Nav hover slide
+   -------------------------------------------------------------------------- */
+.nav-item-hover {
+  transition: transform 0.15s ease;
+}
+.nav-item-hover:hover {
+  transform: translateX(2px);
+}

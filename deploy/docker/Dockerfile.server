@@ -1,0 +1,21 @@
+FROM rust:1-bookworm AS builder
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    clang libclang-dev pkg-config libssl-dev protobuf-compiler && \
+    rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY server/ ./server/
+COPY proto/ ./proto/
+# Create dummy frontend dist directory (build.rs expects it)
+RUN mkdir -p /app/packages/local-web/dist && \
+    echo '<!DOCTYPE html><html><body>build frontend separately</body></html>' \
+    > /app/packages/local-web/dist/index.html
+WORKDIR /app/server
+ENV SQLX_OFFLINE=true
+RUN cargo build --release --bin server
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates libssl3 git && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/server/target/release/server /usr/local/bin/vibetown-server
+EXPOSE 3000
+ENTRYPOINT ["vibetown-server"]

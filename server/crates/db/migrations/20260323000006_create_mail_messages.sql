@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS mail_messages (
+    id TEXT PRIMARY KEY NOT NULL,
+    from_addr TEXT NOT NULL,
+    to_addr TEXT,
+    subject TEXT NOT NULL,
+    body TEXT,
+    priority TEXT NOT NULL DEFAULT 'normal',
+    message_type TEXT NOT NULL DEFAULT 'task',
+    delivery TEXT NOT NULL DEFAULT 'queue',
+    thread_id TEXT,
+    reply_to TEXT REFERENCES mail_messages(id),
+    queue TEXT,
+    channel TEXT,
+    claimed_by TEXT,
+    claimed_at TEXT,
+    pinned INTEGER NOT NULL DEFAULT 0,
+    wisp INTEGER NOT NULL DEFAULT 0,
+    read INTEGER NOT NULL DEFAULT 0,
+    cc_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

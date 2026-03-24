@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: vibetown
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: vibetown
+      app.kubernetes.io/part-of: vibetown
+    includeSelectors: true
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - pdb.yaml

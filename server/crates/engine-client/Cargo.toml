@@ -1,0 +1,16 @@
+[package]
+name = "engine-client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tonic = "0.13"
+prost = "0.13"
+prost-types = "0.13"
+tokio = { workspace = true }
+tokio-stream = "0.1"
+tracing = { workspace = true }
+thiserror = { workspace = true }
+
+[build-dependencies]
+tonic-build = "0.13"

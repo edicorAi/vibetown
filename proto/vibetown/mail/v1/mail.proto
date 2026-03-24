@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package vibetown.mail.v1;
+
+option go_package = "github.com/edicorai/vibetown/engine/internal/grpcapi/gen/vibetown/mail/v1";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+service MailService {
+  rpc SendMail(SendMailRequest) returns (MailMessage);
+  rpc GetInbox(GetInboxRequest) returns (InboxResponse);
+  rpc MarkRead(MarkReadRequest) returns (google.protobuf.Empty);
+  rpc ClaimQueueMessage(ClaimRequest) returns (MailMessage);
+}
+
+message MailMessage {
+  string id = 1;
+  string from_addr = 2;
+  string to_addr = 3;
+  string subject = 4;
+  string body = 5;
+  string priority = 6;         // low, normal, high, urgent
+  string message_type = 7;     // task, escalation, notification, reply, scavenge
+  string delivery = 8;         // queue, interrupt
+  string thread_id = 9;
+  string reply_to = 10;
+  string queue = 11;
+  string channel = 12;
+  string claimed_by = 13;
+  bool pinned = 14;
+  bool read = 15;
+  google.protobuf.Timestamp claimed_at = 16;
+  google.protobuf.Timestamp created_at = 17;
+}
+
+message SendMailRequest {
+  string from_addr = 1;
+  string to_addr = 2;
+  string subject = 3;
+  string body = 4;
+  string priority = 5;
+  string message_type = 6;
+  string delivery = 7;
+  string thread_id = 8;
+  string reply_to = 9;
+  string channel = 10;
+}
+
+message GetInboxRequest {
+  string to_addr = 1;
+  string queue = 2;
+  string channel = 3;
+  bool unread_only = 4;
+  int32 limit = 5;
+  int32 offset = 6;
+}
+
+message InboxResponse {
+  repeated MailMessage messages = 1;
+  int32 total = 2;
+}
+
+message MarkReadRequest {
+  string id = 1;
+}
+
+message ClaimRequest {
+  string queue = 1;
+  string claimed_by = 2;
+}

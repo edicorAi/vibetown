@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package vibetown.feed.v1;
+
+option go_package = "github.com/edicorai/vibetown/engine/internal/grpcapi/gen/vibetown/feed/v1";
+
+import "google/protobuf/timestamp.proto";
+
+service FeedService {
+  rpc StreamEvents(StreamEventsRequest) returns (stream FeedEvent);
+  rpc GetRecentEvents(GetRecentEventsRequest) returns (EventsResponse);
+}
+
+message FeedEvent {
+  string id = 1;
+  string event_type = 2;     // agent_spawned, work_dispatched, convoy_completed, etc.
+  string source = 3;         // agent name or "system"
+  string rig_id = 4;
+  string agent_id = 5;
+  string work_item_id = 6;
+  string summary = 7;
+  string details_json = 8;
+  string severity = 9;       // debug, info, warn, error
+  google.protobuf.Timestamp created_at = 10;
+}
+
+message StreamEventsRequest {
+  string rig_id = 1;         // optional filter
+  string severity = 2;       // optional minimum severity
+}
+
+message GetRecentEventsRequest {
+  string rig_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message EventsResponse {
+  repeated FeedEvent events = 1;
+  int32 total = 2;
+}

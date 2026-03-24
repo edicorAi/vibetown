@@ -1,0 +1,13 @@
+FROM golang:1.25-bookworm AS builder
+WORKDIR /app
+COPY engine/go.mod engine/go.sum ./
+RUN go mod download
+COPY engine/ .
+RUN CGO_ENABLED=0 go build -o /bin/vibetown-engine ./cmd/vibetown-engine
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates git tmux && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /bin/vibetown-engine /usr/local/bin/
+EXPOSE 50051
+ENTRYPOINT ["vibetown-engine"]

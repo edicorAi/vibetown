@@ -1,0 +1,59 @@
+# ─── Git ────────────────────────────────────────────────────────────────────────
+.git
+.gitignore
+
+# ─── CI / Config ───────────────────────────────────────────────────────────────
+.github/
+.claude/
+.vscode/
+.idea/
+
+# ─── Build artifacts ──────────────────────────────────────────────────────────
+server/target/
+engine/bin/
+web/packages/app/dist/
+node_modules/
+.turbo/
+.pnpm-store/
+coverage/
+
+# ─── Proto generated (needed for engine build) ───────────────────────────────
+# NOTE: gen/ is gitignored but must be in Docker context for the Go build
+
+# ─── Reference code ───────────────────────────────────────────────────────────
+_excamples/
+
+# ─── Environment / Secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+*.pem
+*.key
+credentials.json
+
+# ─── OS / IDE ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*.iml
+
+# ─── Docs / Tests (not needed in images) ──────────────────────────────────────
+docs/
+tests/
+*.md
+!deploy/**/*.md
+LICENSE
+
+# ─── SQLite dev databases ─────────────────────────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
+
+# ─── Temp ──────────────────────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.orig
+*.log

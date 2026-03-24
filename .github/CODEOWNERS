@@ -1,0 +1,9 @@
+# Default owners for the entire repo
+* @edicorai
+
+# Component-specific ownership
+/engine/   @edicorai
+/server/   @edicorai
+/web/      @edicorai
+/proto/    @edicorai
+/deploy/   @edicorai
