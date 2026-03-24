@@ -28,7 +28,7 @@ command-group = { version = "5.0", features = ["with-tokio"] }
 futures = "0.3"
 tokio = { workspace = true }
 globwalk = "0.9"
-portable-pty = "0.8"
+portable-pty = "0.9"
 
 [build-dependencies]
 dotenv = "0.15"
