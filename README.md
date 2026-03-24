@@ -7,6 +7,7 @@
 </p>
 
 <p align="center">
+  <a href="#screenshots">Screenshots</a> &middot;
   <a href="#quick-start">Quick Start</a> &middot;
   <a href="#architecture">Architecture</a> &middot;
   <a href="#deployment">Deployment</a> &middot;
@@ -19,6 +20,33 @@
 Plan work on a kanban board, dispatch it to coding agents — **Claude Code**, **Codex**, **Gemini**, **Copilot**, **Cursor**, **AMP**, **OpenCode**, **Qwen**, **Droid** — monitor progress in real time, review diffs, and merge. All from a single interface.
 
 Built for engineers running **10–50+ agents** simultaneously across multiple projects.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td><b>Dashboard</b></td>
+    <td><b>Dashboard (Dark)</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/dashboard.png" alt="Dashboard" width="100%"/></td>
+    <td><img src="docs/images/dashboard-dark.png" alt="Dashboard Dark Mode" width="100%"/></td>
+  </tr>
+  <tr>
+    <td><b>Agent Management</b></td>
+    <td><b>Merge Queue</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/agents.png" alt="Agents" width="100%"/></td>
+    <td><img src="docs/images/merge-queue.png" alt="Merge Queue" width="100%"/></td>
+  </tr>
+  <tr>
+    <td colspan="2"><b>Agent Comms (Inter-agent messaging)</b></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/images/agent-comms.png" alt="Agent Comms" width="100%"/></td>
+  </tr>
+</table>
 
 ## Features
 
