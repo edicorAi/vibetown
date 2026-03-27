@@ -17,6 +17,7 @@ members = [
     "crates/git-host",
     "crates/engine-client",
     "crates/orchestration",
+    "crates/user-auth",
 ]
 
 [workspace.dependencies]

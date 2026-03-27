@@ -36,11 +36,16 @@ services:
       context: .
       dockerfile: deploy/docker/Dockerfile.server
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
       VT_DATABASE_URL: postgres://vibetown:vibetown@postgres:5432/vibetown
       VT_ENGINE_GRPC_ADDR: engine:50051
-      VT_PORT: "3000"
+      PORT: "3001"
+      HOST: "0.0.0.0"
+      # Auth: set to "required" for multi-user mode
+      VT_AUTH_MODE: "${VT_AUTH_MODE:-none}"
+      VT_AUTH_LOCAL_ENABLED: "${VT_AUTH_LOCAL_ENABLED:-true}"
+      VT_SESSION_TTL: "${VT_SESSION_TTL:-604800}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,10 +62,15 @@ services:
       dockerfile: ../deploy/docker/Dockerfile.web
     ports:
       - "5173:5173"
+    environment:
+      VITE_API_PROXY_TARGET: "http://server:3001"
     volumes:
       - ./web:/app
       - /app/node_modules
-    command: pnpm dev --host
+    command: pnpm --filter @vibetown/app exec vite --host
+    depends_on:
+      server:
+        condition: service_started
     networks:
       - vibetown-net
 

@@ -1,3 +1,4 @@
+use tonic::metadata::MetadataValue;
 use tonic::transport::Channel;
 use tracing::instrument;
 
@@ -68,6 +69,30 @@ impl EngineClient {
             feed: FeedServiceClient::new(channel.clone()),
             mail: MailServiceClient::new(channel),
         }
+    }
+
+    /// Create a tonic request with user context metadata attached.
+    ///
+    /// If `user_id` or `email` are provided, they are injected as
+    /// `x-user-id` and `x-user-email` gRPC metadata headers, which the
+    /// Go engine extracts via its `UserContextInterceptor`.
+    pub fn request_with_user<T>(
+        payload: T,
+        user_id: Option<&str>,
+        email: Option<&str>,
+    ) -> tonic::Request<T> {
+        let mut request = tonic::Request::new(payload);
+        if let Some(id) = user_id {
+            if let Ok(val) = id.parse::<MetadataValue<tonic::metadata::Ascii>>() {
+                request.metadata_mut().insert("x-user-id", val);
+            }
+        }
+        if let Some(e) = email {
+            if let Ok(val) = e.parse::<MetadataValue<tonic::metadata::Ascii>>() {
+                request.metadata_mut().insert("x-user-email", val);
+            }
+        }
+        request
     }
 
     // ─── Health ──────────────────────────────────────────────────────────

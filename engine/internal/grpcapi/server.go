@@ -35,8 +35,11 @@ func NewServer(port int) *GRPCServer {
 // All handlers share the same engine instance.
 func NewServerWithEngine(port int, engine Engine) *GRPCServer {
 	s := &GRPCServer{
-		port:          port,
-		server:        grpc.NewServer(),
+		port: port,
+		server: grpc.NewServer(
+			grpc.UnaryInterceptor(UserContextInterceptor()),
+			grpc.StreamInterceptor(UserContextStreamInterceptor()),
+		),
 		Orchestration: NewOrchestrationHandler(engine),
 		Health:        NewHealthHandler(),
 		Feed:          NewFeedHandler(engine),

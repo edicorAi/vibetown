@@ -14,3 +14,7 @@ pub mod proto {
 
 mod client;
 pub use client::{EngineClient, EngineClientError};
+
+/// Re-export the user metadata helper so callers can annotate requests
+/// with user identity for audit/scoping purposes.
+pub use client::EngineClient as EngineClientExt;

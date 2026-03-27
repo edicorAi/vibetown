@@ -1,12 +1,18 @@
+use std::sync::Arc;
+
 use axum::{
     Router,
     routing::{IntoMakeService, get},
 };
+use deployment::Deployment;
 use tower_http::{compression::CompressionLayer, validate_request::ValidateRequestHeaderLayer};
+use user_auth::UserAuthService;
 
 use crate::{DeploymentImpl, middleware};
 
+pub mod admin;
 pub mod approvals;
+pub mod auth;
 pub mod config;
 pub mod containers;
 pub mod filesystem;
@@ -34,9 +40,26 @@ pub mod work_items;
 pub mod workspaces;
 
 pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
-    let api_routes = Router::new()
+    // Build the auth service Arc for middleware state
+    let auth_service: Arc<UserAuthService> = if let Some(auth) = deployment.user_auth() {
+        // We need to create a new instance since we can't Arc a reference.
+        // The deployment owns the service; we create a shared reference via cloning pool.
+        let config = auth.config().clone();
+        Arc::new(UserAuthService::new(config, auth.pool().clone()))
+    } else {
+        // Create a no-op auth service (auth not required)
+        let config = user_auth::config::AuthConfig::default();
+        Arc::new(UserAuthService::new(config, deployment.db().pool.clone()))
+    };
+
+    // Public routes — no auth required
+    let public_routes = Router::new()
         .route("/health", get(health::health_check))
         .route("/ready", get(health::ready_check))
+        .merge(auth::router());
+
+    // Protected routes — auth middleware applied when VT_AUTH_MODE=required
+    let protected_routes = Router::new()
         .merge(config::router())
         .merge(containers::router(&deployment))
         .merge(workspaces::router(&deployment))
@@ -58,8 +81,17 @@ pub fn router(deployment: DeploymentImpl) -> IntoMakeService<Router> {
         .merge(feed::router(&deployment))
         .merge(mail::router(&deployment))
         .merge(work_items::router(&deployment))
+        .merge(admin::router())
         .nest("/remote", remote::router())
         .nest("/attachments", attachments::routes())
+        .layer(axum::middleware::from_fn_with_state(
+            auth_service,
+            user_auth::middleware::require_auth,
+        ));
+
+    let api_routes = Router::new()
+        .merge(public_routes)
+        .merge(protected_routes)
         .layer(ValidateRequestHeaderLayer::custom(
             middleware::validate_origin,
         ))

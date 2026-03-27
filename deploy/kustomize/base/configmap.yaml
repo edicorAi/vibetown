@@ -7,3 +7,7 @@ data:
   VT_LOG_LEVEL: "info"
   VT_AGENT_RUNTIME: "default"
   VT_WORKTREE_PATH: "/data/worktrees"
+  # Authentication: set to "required" for multi-user mode
+  VT_AUTH_MODE: "none"
+  VT_AUTH_LOCAL_ENABLED: "true"
+  VT_SESSION_TTL: "604800"

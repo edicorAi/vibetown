@@ -38,6 +38,35 @@ postgres:
   secretKeys:
     password: password
 
+auth:
+  # "none" (single-user, no login) or "required" (multi-user with login)
+  mode: "none"
+  sessionTTL: 604800  # 7 days in seconds
+  sessionSecret: ""   # auto-generated if empty
+  local:
+    enabled: true
+  oidc: []
+    # - name: Google
+    #   issuerUrl: https://accounts.google.com
+    #   clientId: ""
+    #   clientSecret: ""
+    #   existingSecret: ""
+    #   secretKeys:
+    #     clientId: client-id
+    #     clientSecret: client-secret
+    #   scopes: "openid,email,profile"
+  ldap:
+    enabled: false
+    url: ""
+    bindDnTemplate: ""
+    searchBase: ""
+    userFilter: "(uid={username})"
+    tls: false
+    starttls: false
+    attrEmail: "mail"
+    attrName: "cn"
+    attrUsername: "uid"
+
 ingress:
   enabled: false
   className: ""

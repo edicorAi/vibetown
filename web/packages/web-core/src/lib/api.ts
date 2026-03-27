@@ -10,15 +10,81 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
       ...init?.headers,
     },
   });
+  if (res.status === 401 && !path.startsWith("/auth/")) {
+    // Redirect to login if not already there
+    if (!window.location.hash.startsWith("#/login")) {
+      window.location.hash = "#/login";
+    }
+    throw new Error("Authentication required");
+  }
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`);
   }
   return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Auth types & functions
+// ---------------------------------------------------------------------------
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  username: string | null;
+  display_name: string | null;
+  auth_provider: string;
+  avatar_url: string | null;
+  is_active: boolean;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export interface AuthProvider {
+  name: string;
+  provider_type: string;
+  enabled: boolean;
+}
+
+export interface AuthStatus {
+  has_users: boolean;
+  auth_required: boolean;
+  providers: AuthProvider[];
+}
+
+export function fetchAuthStatus(): Promise<AuthStatus> {
+  return apiFetch<AuthStatus>("/auth/status");
+}
+
+export function fetchCurrentUser(): Promise<{ user: AuthUser }> {
+  return apiFetch<{ user: AuthUser }>("/auth/me");
+}
+
+export function login(email: string, password: string): Promise<{ user: AuthUser }> {
+  return apiFetch<{ user: AuthUser }>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function ldapLogin(username: string, password: string): Promise<{ user: AuthUser }> {
+  return apiFetch<{ user: AuthUser }>("/auth/ldap/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function logout(): Promise<void> {
+  return apiFetch<void>("/auth/logout", { method: "POST" });
+}
+
+export function fetchAuthProviders(): Promise<AuthProvider[]> {
+  return apiFetch<AuthProvider[]>("/auth/providers");
 }
 
 // ---------------------------------------------------------------------------
@@ -138,16 +204,19 @@ export function killAgent(id: string): Promise<void> {
   return apiFetch<void>(`/agents/${id}`, { method: "DELETE" });
 }
 
-export function fetchInbox(): Promise<MailMessage[]> {
-  return apiFetch<MailMessage[]>("/mail/inbox");
+export async function fetchInbox(): Promise<MailMessage[]> {
+  const res = await apiFetch<{ messages: MailMessage[] } | MailMessage[]>("/mail/inbox");
+  return Array.isArray(res) ? res : res.messages ?? [];
 }
 
-export function fetchSent(): Promise<MailMessage[]> {
-  return apiFetch<MailMessage[]>("/mail/sent");
+export async function fetchSent(): Promise<MailMessage[]> {
+  const res = await apiFetch<{ messages: MailMessage[] } | MailMessage[]>("/mail/sent");
+  return Array.isArray(res) ? res : res.messages ?? [];
 }
 
-export function fetchMailQueue(): Promise<MailMessage[]> {
-  return apiFetch<MailMessage[]>("/mail/queue");
+export async function fetchMailQueue(): Promise<MailMessage[]> {
+  const res = await apiFetch<{ messages: MailMessage[] } | MailMessage[]>("/mail/queue");
+  return Array.isArray(res) ? res : res.messages ?? [];
 }
 
 export function sendMail(data: {

@@ -1,0 +1,25 @@
+[package]
+name = "user-auth"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+db = { path = "../db" }
+utils = { path = "../utils" }
+argon2 = "0.5"
+ldap3 = "0.11"
+base64 = "0.22"
+sha2 = "0.10"
+rand = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+axum = { workspace = true }
+thiserror = { workspace = true }
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "sqlite", "chrono", "uuid"] }
+reqwest = { workspace = true }
+urlencoding = "2"

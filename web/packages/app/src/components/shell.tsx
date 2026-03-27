@@ -12,8 +12,6 @@ import {
   PanelLeftOpen,
   Moon,
   Sun,
-  Wifi,
-  WifiOff,
   Settings,
   FolderGit2,
 } from "lucide-react"
@@ -23,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@vibetown/ui/components/tooltip"
+import { UserMenu } from "@/components/user-menu.tsx"
 
 const NAV_ITEMS = [
   { path: "/orchestration", label: "Dashboard", icon: LayoutDashboard },
@@ -30,7 +29,6 @@ const NAV_ITEMS = [
   { path: "/orchestration/mail", label: "Agent Comms", icon: Mail },
   { path: "/orchestration/merge-queue", label: "Merge Queue", icon: GitMerge },
   { path: "/projects", label: "Projects", icon: FolderGit2 },
-  { path: "/settings", label: "Settings", icon: Settings },
 ] as const
 
 interface ShellProps {
@@ -89,8 +87,7 @@ export function Shell({ children, currentPath, onNavigate }: ShellProps) {
   const [collapsed, setCollapsed] = React.useState(false)
   const { dark, toggle: toggleDark } = useDarkMode()
 
-  // Demo mode indicator
-  const [connected] = React.useState(false)
+  const settingsActive = currentPath === "/settings"
 
   return (
     <TooltipProvider delay={200}>
@@ -181,24 +178,45 @@ export function Shell({ children, currentPath, onNavigate }: ShellProps) {
 
           {/* Sidebar footer */}
           <div className="border-t border-border p-2 space-y-1">
-            {/* Connection status */}
-            <div
-              className={cn(
-                "flex items-center gap-2 rounded-lg px-3 py-2 text-xs",
-                collapsed && "justify-center px-0"
-              )}
-            >
-              {connected ? (
-                <Wifi className="size-3.5 text-green-500" />
-              ) : (
-                <WifiOff className="size-3.5 text-muted-foreground" />
-              )}
-              {!collapsed && (
-                <span className="text-muted-foreground">
-                  {connected ? "Connected" : "Demo Mode"}
-                </span>
-              )}
-            </div>
+            {/* User menu */}
+            <UserMenu collapsed={collapsed} />
+
+            {/* Settings */}
+            {collapsed ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      onClick={() => onNavigate("/settings")}
+                      className={cn(
+                        "flex w-full items-center justify-center rounded-lg px-0 py-2 transition-colors",
+                        settingsActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Settings className="size-4" />
+                    </button>
+                  }
+                />
+                <TooltipContent side="right">Settings</TooltipContent>
+              </Tooltip>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onNavigate("/settings")}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  settingsActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Settings className="size-4 shrink-0" />
+                <span>Settings</span>
+              </button>
+            )}
 
             {/* Dark mode toggle */}
             {collapsed ? (
@@ -298,16 +316,22 @@ export function Shell({ children, currentPath, onNavigate }: ShellProps) {
           </nav>
 
           <div className="border-t border-border p-2 space-y-1">
-            <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs">
-              {connected ? (
-                <Wifi className="size-3.5 text-green-500" />
-              ) : (
-                <WifiOff className="size-3.5 text-muted-foreground" />
+            <button
+              type="button"
+              onClick={() => {
+                onNavigate("/settings")
+                setMobileMenuOpen(false)
+              }}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                settingsActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
-              <span className="text-muted-foreground">
-                {connected ? "Connected" : "Demo Mode"}
-              </span>
-            </div>
+            >
+              <Settings className="size-4" />
+              <span>Settings</span>
+            </button>
             <button
               type="button"
               onClick={toggleDark}

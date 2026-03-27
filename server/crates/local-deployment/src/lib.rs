@@ -24,6 +24,7 @@ use services::services::{
     repo::RepoService,
 };
 use tokio::sync::RwLock;
+use user_auth::{UserAuthService, config::AuthConfig};
 use utils::{
     assets::{config_path, credentials_path},
     msg_store::MsgStore,
@@ -57,6 +58,7 @@ pub struct LocalDeployment {
     auth_context: AuthContext,
     oauth_handoffs: Arc<RwLock<HashMap<Uuid, PendingHandoff>>>,
     client_info: ClientInfo,
+    user_auth_service: Option<UserAuthService>,
 }
 
 #[derive(Debug, Clone)]
@@ -197,6 +199,16 @@ impl Deployment for LocalDeployment {
             PrMonitorService::spawn(db, analytics, container, rc).await;
         }
 
+        // Initialize user auth service
+        let auth_config = AuthConfig::from_env();
+        let user_auth_service = if auth_config.auth_required() {
+            tracing::info!("User authentication enabled (VT_AUTH_MODE=required)");
+            Some(UserAuthService::new(auth_config, db.clone().pool))
+        } else {
+            tracing::info!("User authentication disabled (VT_AUTH_MODE=none)");
+            None
+        };
+
         let deployment = Self {
             config,
             user_id,
@@ -216,6 +228,7 @@ impl Deployment for LocalDeployment {
             auth_context,
             oauth_handoffs,
             client_info,
+            user_auth_service,
         };
 
         Ok(deployment)
@@ -279,6 +292,10 @@ impl Deployment for LocalDeployment {
 
     fn client_info(&self) -> &ClientInfo {
         &self.client_info
+    }
+
+    fn user_auth(&self) -> Option<&UserAuthService> {
+        self.user_auth_service.as_ref()
     }
 }
 

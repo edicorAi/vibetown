@@ -8,6 +8,7 @@ api-types = { path = "../api-types" }
 db = { path = "../db" }
 executors = { path="../executors" }
 deployment = { path = "../deployment" }
+user-auth = { path = "../user-auth" }
 client-info = { path = "../client-info" }
 services = { path = "../services" }
 worktree-manager = { path = "../worktree-manager" }

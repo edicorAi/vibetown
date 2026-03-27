@@ -25,6 +25,7 @@ use services::services::{
     remote_client::RemoteClient,
     repo::RepoService,
 };
+use user_auth::UserAuthService;
 use sqlx::Error as SqlxError;
 use thiserror::Error;
 use tokio::sync::RwLock;
@@ -102,6 +103,9 @@ pub trait Deployment: Clone + Send + Sync + 'static {
     fn auth_context(&self) -> &AuthContext;
 
     fn client_info(&self) -> &ClientInfo;
+
+    /// Returns the user auth service when auth is enabled (VT_AUTH_MODE=required).
+    fn user_auth(&self) -> Option<&UserAuthService>;
 
     fn remote_client(&self) -> Result<RemoteClient, RemoteClientNotConfigured> {
         Err(RemoteClientNotConfigured)
