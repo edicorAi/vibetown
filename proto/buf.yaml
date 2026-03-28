@@ -1,6 +1,6 @@
 version: v2
 modules:
-  - path: vibetown
+  - path: .
 lint:
   use:
     - STANDARD

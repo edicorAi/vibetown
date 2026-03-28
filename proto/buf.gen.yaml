@@ -17,4 +17,4 @@ plugins:
     opt:
       - paths=source_relative
 inputs:
-  - directory: vibetown
+  - directory: .
